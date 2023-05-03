@@ -1,0 +1,69 @@
+---
+title: "Gigacow example data"
+---
+
+```{r include = FALSE}
+#install.packages("odbc")
+#install.packages("DBI")
+#install.packages("dplyr")
+#install.packages("dbplyr")
+#install.packages("kableExtra")
+
+
+
+library(odbc)
+library(DBI)
+library(dplyr)
+library(dbplyr)
+library(kableExtra)
+
+#Connecting to the database using the R user credentions.
+con <- dbConnect(odbc(),
+                 Driver = "SQL Server",
+                 Server = "sqldbtest2-1.ad.slu.se\\inst1",
+                 Database = "Gigacow_QA"
+)
+odbcListObjects(con)
+
+#Shows the available tables in the schema.
+odbcListObjects(con, catalog="Gigacow_QA", schema="science")
+```
+
+```{r activity, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Activity_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataView")) %>%
+  filter(SourceFileDateTime >= "2023-04-20" & !is.na(SE_Number) & !is.na(AverageActivityLast24Hours)) %>%
+  slice_sample(n = 100)
+DF.Activity <- collect(Activity_Con)
+DF.Activity <- as.data.frame(lapply(DF.Activity, sample))
+DF.Activity <- slice_sample(DF.Activity, n = 10)
+write.csv2(DF.Activity, file = "activity")
+
+Activity_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Activity_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Activity_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(Aid = count(Activity_Id), SEnr = n_distinct(SE_Number))
+Activity = collect(Activity_Con)
+
+Activity
+
+kbl(DF.Activity) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+
+```{r kokontrollen-cow, include = TRUE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Activity_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataView")) %>%
+  filter(SourceFileDateTime >= "2023-04-20" & !is.na(SE_Number) & !is.na(AverageActivityLast24Hours)) %>%
+  slice_sample(n = 100)
+DF.Activity <- collect(Activity_Con)
+DF.Activity <- as.data.frame(lapply(DF.Activity, sample))
+DF.Activity <- slice_sample(DF.Activity, n = 10)
+write.csv2(DF.Activity, file = "activity")
+
+kbl(DF.Activity) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")

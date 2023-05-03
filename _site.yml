@@ -1,0 +1,8 @@
+name: "Gigacow example data"
+navbar:
+  title: "Gigacow example data"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "About"
+      href: about.html
