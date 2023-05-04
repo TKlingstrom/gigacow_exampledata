@@ -1,6 +1,7 @@
 ---
 title: "Gigacow example data"
 ---
+This booklet was created on 2023-05-03 as a brief overview on the available data in Gigacow collected from the DelPro herd management software. Gigacow consist of a SQL database with prepared views which can be accessed through dbplyr if you have received a SLU approval and user account (contact Tomas Klingström at tomas.klingstrom@slu.se for further information). To see the code generating the booklet you can visit https://github.com/TKlingstrom/gigacow_exampledata and download the entire code repository.
 
 ```{r include = FALSE}
 #install.packages("odbc")
@@ -29,6 +30,123 @@ odbcListObjects(con)
 odbcListObjects(con, catalog="Gigacow_QA", schema="science")
 ```
 
+
+## Number of cows
+A Swedish cow is uniquely identifiable if it got a farmnumber (pseudonymized in Gigacow), an ear tag number and a birth year. Gigacow is built on three separate datasets (farm data, Kokontrollen data and NAV data) and these values must be used to connect individuals between the datasets. 
+```{r Cows, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Gigacow_Cow_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Gigacow_Cow_DataView")) %>%
+  filter(!is.na(SE_Number) & !is.na(BirthDate)) %>%
+  slice_sample(n = 100)
+DF.Gigacow_Cow <- collect(Gigacow_Cow_Con)
+DF.Gigacow_Cow <- as.data.frame(lapply(DF.Gigacow_Cow, sample))
+DF.Gigacow_Cow <- slice_sample(DF.Gigacow_Cow, n = 10)
+write.csv2(DF.Gigacow_Cow, file = "Gigacow_Cow.csv")
+
+Gigacow_Cow_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Gigacow_Cow_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Gigacow_Cow_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Gigacow_Cow_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrGigacow_Cow = count(Gigacow_Cow_Id), nrAnimals = n_distinct(SE_Number))
+Gigacow_Cow = collect(Gigacow_Cow_Con)
+
+Gigacow_Cow
+
+kbl(DF.Gigacow_Cow) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Gigacow_Cow$nrAnimals)`cows recorded in the on-farm herd management system.
+
+## Milking data
+Milking data in data comes from farms with milk robots or milk parlours. Milking robots provide more data than milk parlours but for convenience an aggregated table with total yield per milking event from all farms has been created.
+
+```{r allMilkings, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+CowMilkYieldCommon_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "CowMilkYield_Common_View")) %>%
+  filter(StartDate >= "2023-04-20" & !is.na(SE_Number) & !is.na(TotalYield)) %>%
+  slice_sample(n = 100)
+DF.CowMilkYieldCommon <- collect(CowMilkYieldCommon_Con)
+DF.CowMilkYieldCommon <- as.data.frame(lapply(DF.CowMilkYieldCommon, sample))
+DF.CowMilkYieldCommon <- slice_sample(DF.CowMilkYieldCommon, n = 10)
+write.csv2(DF.CowMilkYieldCommon, file = "CowMilkYieldCommon.csv")
+
+CowMilkYieldCommon_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "CowMilkYield_Common_View")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Feed_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Feed_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrMilkings = count(Id), nrAnimals = n_distinct(SE_Number))
+CowMilkYieldCommon = collect(CowMilkYieldCommon_Con)
+
+CowMilkYieldCommon
+
+kbl(DF.CowMilkYieldCommon) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+ The Gigacow database currently contain `r sum(CowMilkYieldCommon$nrMilkings)` milking events from `r sum(CowMilkYieldCommon$nrAnimals)` animals.
+ 
+## Robot milkings 
+```{r RobotMilkings, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+MilkRobot_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "MilkRobot_DataView")) %>%
+  filter(MilkingStartDateTime >= "2023-04-20" & !is.na(SE_Number) & !is.na(TotalYield)) %>%
+  slice_sample(n = 100)
+DF.MilkRobot <- collect(MilkRobot_Con)
+DF.MilkRobot <- as.data.frame(lapply(DF.MilkRobot, sample))
+DF.MilkRobot <- slice_sample(DF.MilkRobot, n = 10)
+write.csv2(DF.MilkRobot, file = "MilkRobot.csv")
+
+MilkRobot_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "MilkRobot_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Feed_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Feed_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrMilkings = count(MilkRobot_Id), nrAnimals = n_distinct(SE_Number))
+MilkRobot = collect(MilkRobot_Con)
+
+MilkRobot
+
+kbl(DF.MilkRobot) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+
+ The Gigacow database currently contain `r sum(MilkRobot$nrMilkings)` milkings from `r sum(MilkRobot$nrAnimals)` animals in farms with milking robots.
+ 
+## Parlour milkings 
+```{r ParlourMilkings, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+MilkOther_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "MilkOther_DataView")) %>%
+  filter(MilkingDate >= "2023-04-20" & !is.na(SE_Number) & !is.na(SessionAverageFlow)) %>%
+  slice_sample(n = 100)
+DF.MilkOther <- collect(MilkOther_Con)
+DF.MilkOther <- as.data.frame(lapply(DF.MilkOther, sample))
+DF.MilkOther <- slice_sample(DF.MilkOther, n = 10)
+write.csv2(DF.MilkOther, file = "MilkOther.csv")
+
+MilkOther_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "MilkOther_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Activity_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Activity_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrMilkings = count(MilkOther_Id), nrAnimals = n_distinct(SE_Number))
+MilkOther = collect(MilkOther_Con)
+
+MilkOther
+
+kbl(DF.MilkOther) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+
+ The Gigacow database currently contain `r sum(MilkOther$nrMilkings)` milkings from `r sum(MilkOther$nrAnimals)` animals in farms with milking parlours.
+
+## Activity data
+DeLaval activity sensors are facing serious competition from other providers such as SenseHub and Växa Control (Nedap). Växa recently switched from being a distributor of SenseHub to selling "Växa Contol" which is provided by the sensor manufacturer Nedap. SenseHub and Nedap are both recognised as highly reliable for heat detection and more advanced subscriptions can also include health monitoring, feeding behaviour and even position tracking. Currently DeLaval activity sensors are the only ones available in Gigacow.
+
 ```{r activity, include = TRUE, echo=FALSE}
 #The below code chunks run an SQL query on each table and then downloads the result.
 Activity_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataView")) %>%
@@ -37,14 +155,14 @@ Activity_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataVi
 DF.Activity <- collect(Activity_Con)
 DF.Activity <- as.data.frame(lapply(DF.Activity, sample))
 DF.Activity <- slice_sample(DF.Activity, n = 10)
-write.csv2(DF.Activity, file = "activity")
+write.csv2(DF.Activity, file = "activity.csv")
 
 Activity_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataView")) %>%
   group_by(FarmName_Pseudo) %>%
 #  summarise(count = Activity_Id) #%>% #This does not work
 #  summarise(count = n_distinct(Activity_Id), .groups = 'drop') #%>%
 #  summarise(count = n_distinct(SE_Number), .groups = 'drop')
-  summarise(Aid = count(Activity_Id), SEnr = n_distinct(SE_Number))
+  summarise(nrActivity = count(Activity_Id), nrAnimals = n_distinct(SE_Number))
 Activity = collect(Activity_Con)
 
 Activity
@@ -54,16 +172,345 @@ kbl(DF.Activity) %>%
   scroll_box(height = "400px")
 ```
 
-```{r kokontrollen-cow, include = TRUE}
-#The below code chunks run an SQL query on each table and then downloads the result.
-Activity_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Activity_DataView")) %>%
-  filter(SourceFileDateTime >= "2023-04-20" & !is.na(SE_Number) & !is.na(AverageActivityLast24Hours)) %>%
-  slice_sample(n = 100)
-DF.Activity <- collect(Activity_Con)
-DF.Activity <- as.data.frame(lapply(DF.Activity, sample))
-DF.Activity <- slice_sample(DF.Activity, n = 10)
-write.csv2(DF.Activity, file = "activity")
+The Gigacow database currently contain `r sum(Activity$nrActivity)` activity measurements from `r sum(Activity$nrAnimals)` animals in farms participating in Gigacow.
 
-kbl(DF.Activity) %>%
+## Feed data
+A new feed report is soon coming online but this is the currently available data.
+
+```{r feed, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Feed_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Feed_DataView")) %>%
+  filter(FeedDate >= "2023-04-20" & !is.na(SE_Number) & !is.na(FeedConsumedPercent)) %>%
+  slice_sample(n = 100)
+DF.Feed <- collect(Feed_Con)
+DF.Feed <- as.data.frame(lapply(DF.Feed, sample))
+DF.Feed <- slice_sample(DF.Feed, n = 10)
+write.csv2(DF.Feed, file = "Feed.csv")
+
+Feed_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Feed_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Feed_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Feed_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrFeed = count(Feed_Id), nrAnimals = n_distinct(SE_Number))
+Feed = collect(Feed_Con)
+
+Feed
+
+kbl(DF.Feed) %>%
   kable_minimal("striped") %>%
   scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Feed$nrFeed)` Feed day records from `r sum(Feed$nrAnimals)` animals in farms participating in Gigacow.
+
+
+## Body Conditions Score data
+DeLaval BCS cameras for Body Condition Scoring are available on some farms.
+
+```{r BCS, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+BCS_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Health_BCS_DataView")) %>%
+  filter(BCSEventDate >= "2023-04-20" & !is.na(SE_Number) & !is.na(BCSValue)) %>%
+  slice_sample(n = 100)
+DF.BCS <- collect(BCS_Con)
+DF.BCS <- as.data.frame(lapply(DF.BCS, sample))
+DF.BCS <- slice_sample(DF.BCS, n = 10)
+write.csv2(DF.BCS, file = "BCS.csv")
+
+BCS_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Health_BCS_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = BCS_Id) #%>% #This does not work
+#  summarise(count = n_distinct(BCS_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrBCS = count(Health_BCS_Id), nrAnimals = n_distinct(SE_Number))
+BCS = collect(BCS_Con)
+
+BCS
+
+kbl(DF.BCS) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(BCS$nrBCS)` BCS day records from `r sum(BCS$nrAnimals)` animals in farms participating in Gigacow.
+
+
+## Health Diagnosis and treatments
+Health Diagnosis and treatments can be logged in multiple systems including paper-based ones, Jordbruksverkets database and the on-farm herd management system. This is the data recorded in the DelPro.
+
+```{r Health_DiagnosisTreatment, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Health_DiagnosisTreatment_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Health_DiagnosisTreatment_DataView")) %>%
+  slice_sample(n = 100)
+DF.Health_DiagnosisTreatment <- collect(Health_DiagnosisTreatment_Con)
+DF.Health_DiagnosisTreatment <- as.data.frame(lapply(DF.Health_DiagnosisTreatment, sample))
+DF.Health_DiagnosisTreatment <- slice_sample(DF.Health_DiagnosisTreatment, n = 10)
+write.csv2(DF.Health_DiagnosisTreatment, file = "Health_DiagnosisTreatment.csv")
+
+Health_DiagnosisTreatment_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Health_DiagnosisTreatment_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Health_DiagnosisTreatment_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Health_DiagnosisTreatment_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrHealth_DiagnosisTreatment = count(Health_DiagnosisTreatment_Id), nrAnimals = n_distinct(SE_Number))
+Health_DiagnosisTreatment = collect(Health_DiagnosisTreatment_Con)
+
+Health_DiagnosisTreatment
+
+kbl(DF.Health_DiagnosisTreatment) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Health_DiagnosisTreatment$nrHealth_DiagnosisTreatment)` entries of health events in Gigacow from `r sum(Health_DiagnosisTreatment$nrAnimals)` animals in farms participating in Gigacow.
+
+## Reproduction_Abortion_DataView	 data
+This is the data on abortions recorded in Gigacow
+```{r Abortion, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_Abortion_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Abortion_DataView")) %>%
+  filter(AbortionDate >= "2022-04-20" & !is.na(SE_Number)) %>%
+  slice_sample(n = 100)
+DF.Reproduction_Abortion <- collect(Reproduction_Abortion_Con)
+DF.Reproduction_Abortion <- as.data.frame(lapply(DF.Reproduction_Abortion, sample))
+DF.Reproduction_Abortion <- slice_sample(DF.Reproduction_Abortion, n = 10)
+write.csv2(DF.Reproduction_Abortion, file = "Reproduction_Abortion.csv")
+
+Reproduction_Abortion_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Abortion_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_Abortion_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_Abortion_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_Abortion = count(Reproduction_Abortion_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_Abortion = collect(Reproduction_Abortion_Con)
+
+Reproduction_Abortion
+
+kbl(DF.Reproduction_Abortion) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_Abortion$nrReproduction_Abortion)` abortions from `r sum(Reproduction_Abortion$nrAnimals)` animals in farms participating in Gigacow.
+
+## Calving data
+These are the calving events recorded in Gigacow
+```{r calvings, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_Calving_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Calving_DataView")) %>%
+  filter(CalvingDate >= "2022-04-20" & !is.na(SE_Number) & !is.na(CalvingEase)) %>%
+  slice_sample(n = 100)
+DF.Reproduction_Calving <- collect(Reproduction_Calving_Con)
+DF.Reproduction_Calving <- as.data.frame(lapply(DF.Reproduction_Calving, sample))
+DF.Reproduction_Calving <- slice_sample(DF.Reproduction_Calving, n = 10)
+write.csv2(DF.Reproduction_Calving, file = "Reproduction_Calving.csv")
+
+Reproduction_Calving_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Calving_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_Calving_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_Calving_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_Calving = count(Reproduction_Calving_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_Calving = collect(Reproduction_Calving_Con)
+
+Reproduction_Calving
+
+kbl(DF.Reproduction_Calving) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_Calving$nrReproduction_Calving)` Reproduction_Calving records from `r sum(Reproduction_Calving$nrAnimals)` animals in farms participating in Gigacow.
+
+## DryOff data
+These are the Dry off events recorded in Gigacow
+```{r DryOff, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_DryOff_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_DryOff_DataView")) %>%
+  filter(DryOffDate >= "2022-04-20") %>%
+  slice_sample(n = 100)
+DF.Reproduction_DryOff <- collect(Reproduction_DryOff_Con)
+DF.Reproduction_DryOff <- as.data.frame(lapply(DF.Reproduction_DryOff, sample))
+DF.Reproduction_DryOff <- slice_sample(DF.Reproduction_DryOff, n = 10)
+write.csv2(DF.Reproduction_DryOff, file = "Reproduction_DryOff.csv")
+
+Reproduction_DryOff_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_DryOff_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_DryOff_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_DryOff_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_DryOff = count(Reproduction_DryOff_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_DryOff = collect(Reproduction_DryOff_Con)
+
+Reproduction_DryOff
+
+kbl(DF.Reproduction_DryOff) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_DryOff$nrReproduction_DryOff)` Reproduction_DryOff records from `r sum(Reproduction_DryOff$nrAnimals)` animals in farms participating in Gigacow.
+
+## Insemination data
+These are the Insemination events recorded in Gigacow
+```{r inseminations, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_Insemination_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Insemination_DataView")) %>%
+  filter(InseminationDate >= "2022-04-20") %>%
+  slice_sample(n = 100)
+DF.Reproduction_Insemination <- collect(Reproduction_Insemination_Con)
+DF.Reproduction_Insemination <- as.data.frame(lapply(DF.Reproduction_Insemination, sample))
+DF.Reproduction_Insemination <- slice_sample(DF.Reproduction_Insemination, n = 10)
+write.csv2(DF.Reproduction_Insemination, file = "Reproduction_Insemination.csv")
+
+Reproduction_Insemination_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Insemination_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_Insemination_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_Insemination_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_Insemination = count(Reproduction_Insemination_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_Insemination = collect(Reproduction_Insemination_Con)
+
+Reproduction_Insemination
+
+kbl(DF.Reproduction_Insemination) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_Insemination$nrReproduction_Insemination)` insemination records from `r sum(Reproduction_Insemination$nrAnimals)` animals in farms participating in Gigacow.
+
+## Lactation data
+These are the Lactation days recorded in Gigacow
+```{r Lactations, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_Lactation_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Lactation_DataView")) %>%
+  filter(LactationInfoDate >= "2022-04-20") %>%
+  slice_sample(n = 100)
+DF.Reproduction_Lactation <- collect(Reproduction_Lactation_Con)
+DF.Reproduction_Lactation <- as.data.frame(lapply(DF.Reproduction_Lactation, sample))
+DF.Reproduction_Lactation <- slice_sample(DF.Reproduction_Lactation, n = 10)
+write.csv2(DF.Reproduction_Lactation, file = "Reproduction_Lactation.csv")
+
+Reproduction_Lactation_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_Lactation_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_Lactation_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_Lactation_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_Lactation = count(Reproduction_Lactation_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_Lactation = collect(Reproduction_Lactation_Con)
+
+Reproduction_Lactation
+
+kbl(DF.Reproduction_Lactation) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_Lactation$nrReproduction_Lactation)` lactation days with associated lactation numbers from `r sum(Reproduction_Lactation$nrAnimals)` animals in farms participating in Gigacow.
+
+## PregnancyCheck data
+These are the PregnancyCheck events recorded in Gigacow
+```{r PregnancyChecks, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_PregnancyCheck_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_PregnancyCheck_DataView")) %>%
+  filter(PregnancyCheckDate >= "2022-04-20") %>%
+  slice_sample(n = 100)
+DF.Reproduction_PregnancyCheck <- collect(Reproduction_PregnancyCheck_Con)
+DF.Reproduction_PregnancyCheck <- as.data.frame(lapply(DF.Reproduction_PregnancyCheck, sample))
+DF.Reproduction_PregnancyCheck <- slice_sample(DF.Reproduction_PregnancyCheck, n = 10)
+write.csv2(DF.Reproduction_PregnancyCheck, file = "Reproduction_PregnancyCheck.csv")
+
+Reproduction_PregnancyCheck_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_PregnancyCheck_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_PregnancyCheck_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_PregnancyCheck_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_PregnancyCheck = count(Reproduction_PregnancyCheck_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_PregnancyCheck = collect(Reproduction_PregnancyCheck_Con)
+
+Reproduction_PregnancyCheck
+
+kbl(DF.Reproduction_PregnancyCheck) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_PregnancyCheck$nrReproduction_PregnancyCheck)` Pregnancy Check records from `r sum(Reproduction_PregnancyCheck$nrAnimals)` animals in farms participating in Gigacow.
+
+
+## ReproductionStatus data
+These are the ReproductionStatus events recorded in Gigacow
+```{r reproductionStatus, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Reproduction_ReproductionStatus_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_ReproductionStatus_DataView")) %>%
+  filter(RepoductionStatusDate >= "2022-04-20") %>%
+  slice_sample(n = 100)
+DF.Reproduction_ReproductionStatus <- collect(Reproduction_ReproductionStatus_Con)
+DF.Reproduction_ReproductionStatus <- as.data.frame(lapply(DF.Reproduction_ReproductionStatus, sample))
+DF.Reproduction_ReproductionStatus <- slice_sample(DF.Reproduction_ReproductionStatus, n = 10)
+write.csv2(DF.Reproduction_ReproductionStatus, file = "Reproduction_ReproductionStatus.csv")
+
+Reproduction_ReproductionStatus_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Reproduction_ReproductionStatus_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Reproduction_ReproductionStatus_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Reproduction_ReproductionStatus_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrReproduction_ReproductionStatus = count(Reproduction_ReproductionStatus_Id), nrAnimals = n_distinct(SE_Number))
+Reproduction_ReproductionStatus = collect(Reproduction_ReproductionStatus_Con)
+
+Reproduction_ReproductionStatus
+
+kbl(DF.Reproduction_ReproductionStatus) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Reproduction_ReproductionStatus$nrReproduction_ReproductionStatus)` Reproductions status records from `r sum(Reproduction_ReproductionStatus$nrAnimals)` animals in farms participating in Gigacow.
+
+
+## Stillborn data
+These are the Stillborn events recorded in Gigacow
+```{r stillborn, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Stillborn_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Stillborn_DataView")) %>%
+  slice_sample(n = 100)
+DF.Stillborn <- collect(Stillborn_Con)
+DF.Stillborn <- as.data.frame(lapply(DF.Stillborn, sample))
+DF.Stillborn <- slice_sample(DF.Stillborn, n = 10)
+write.csv2(DF.Stillborn, file = "Stillborn.csv")
+
+Stillborn_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Stillborn_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Stillborn_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Stillborn_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrStillborn = count(SourceFileDate))
+Stillborn = collect(Stillborn_Con)
+
+Stillborn
+
+kbl(DF.Stillborn) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Stillborn$nrStillborn)` stillborn events in farms participating in Gigacow.
+
+## Traffic data
+Traffic data is collected from farms using DeLaval smart gates. Farms with milk parlours normally have free cow traffic while farms with robot milking may use free cow traffic and only have a smart gate for controlling entry into the milking robot or various forms of controlled cow traffic to direct traffic with multiple smart gates.
+
+```{r traffic, include = TRUE, echo=FALSE}
+#The below code chunks run an SQL query on each table and then downloads the result.
+Traffic_Con <- con %>% tbl(in_catalog("Gigacow_QA", "science", "Traffic_DataView")) %>%
+  slice_sample(n = 100)
+DF.Traffic <- collect(Traffic_Con)
+DF.Traffic <- as.data.frame(lapply(DF.Traffic, sample))
+DF.Traffic <- slice_sample(DF.Traffic, n = 10)
+write.csv2(DF.Traffic, file = "Traffic.csv")
+
+Traffic_Con = con %>% tbl(in_catalog("Gigacow_QA", "science", "Traffic_DataView")) %>%
+  group_by(FarmName_Pseudo) %>%
+#  summarise(count = Traffic_Id) #%>% #This does not work
+#  summarise(count = n_distinct(Traffic_Id), .groups = 'drop') #%>%
+#  summarise(count = n_distinct(SE_Number), .groups = 'drop')
+  summarise(nrTraffic = count(Traffic_Id), nrAnimals = n_distinct(SE_Number))
+Traffic = collect(Traffic_Con)
+
+Traffic
+
+kbl(DF.Traffic) %>%
+  kable_minimal("striped") %>%
+  scroll_box(height = "400px")
+```
+The Gigacow database currently contain `r sum(Traffic$nrTraffic)` gate passages by `r sum(Traffic$nrAnimals)` animals in farms participating in Gigacow.
