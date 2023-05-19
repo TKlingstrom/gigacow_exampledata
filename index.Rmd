@@ -1,6 +1,7 @@
 ---
 title: "Gigacow example data"
 ---
+
 This booklet was created on 2023-05-03 as a brief overview on the available data in Gigacow collected from the DelPro herd management software. Gigacow consist of a SQL database with prepared views which can be accessed through dbplyr if you have received a SLU approval and user account (contact Tomas Klingström at tomas.klingstrom@slu.se for further information). To see the code generating the booklet you can visit https://github.com/TKlingstrom/gigacow_exampledata and download the entire code repository.
 
 ```{r include = FALSE}

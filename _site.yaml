@@ -1,4 +1,5 @@
 name: "Gigacow example data"
+output_dir: "_site"
 navbar:
   title: "Gigacow example data"
   left:
