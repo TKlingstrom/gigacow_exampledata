@@ -3,7 +3,7 @@ title: "Gigacow example data"
 output: html_document
 ---
 
-This booklet was created on 2023-05-03 as a brief overview on the available data in Gigacow collected from the DelPro herd management software. Gigacow consist of a SQL database with prepared views which can be accessed through dbplyr if you have received a SLU approval and user account (contact Tomas Klingström at tomas.klingstrom@slu.se for further information). To see the code generating the booklet you can visit https://github.com/TKlingstrom/gigacow_exampledata and download the entire code repository.
+This booklet was created on 2023-10-02 as a brief overview on the available data in Gigacow collected from the DelPro herd management software. Gigacow consist of a SQL database with prepared views which can be accessed through dbplyr if you have received a SLU approval and user account (contact Tomas Klingström at tomas.klingstrom@slu.se for further information). To see the code generating the booklet you can visit https://github.com/TKlingstrom/gigacow_exampledata and download the entire code repository.
 
 ```{r include = FALSE}
 #install.packages("odbc")
@@ -23,7 +23,7 @@ library(kableExtra)
 #Connecting to the database using the R user credentions.
 con <- dbConnect(odbc(),
                  Driver = "SQL Server",
-                 Server = "sqldbtest2-1.ad.slu.se\\inst1",
+                 Server = "gigacow_qa.db.slu.se",
                  Database = "Gigacow_QA"
 )
 odbcListObjects(con)
@@ -59,7 +59,7 @@ kbl(DF.Gigacow_Cow) %>%
   kable_minimal("striped") %>%
   scroll_box(height = "400px")
 ```
-The Gigacow database currently contain `r sum(Gigacow_Cow$nrAnimals)`cows recorded in the on-farm herd management system.
+The Gigacow database currently contain `r sum(Gigacow_Cow$nrAnimals)` cows recorded in the on-farm herd management system.
 
 ## Milking data
 Milking data in data comes from farms with milk robots or milk parlours. Milking robots provide more data than milk parlours but for convenience an aggregated table with total yield per milking event from all farms has been created.
