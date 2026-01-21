@@ -3,7 +3,14 @@ title: "Gigacow example data"
 output: html_document
 ---
 
-This booklet was created on 2024-08-28 as a brief overview on the available data in Gigacow collected from the DelPro herd management software. Gigacow consist of a SQL database with prepared views which can be accessed through dbplyr if you have received a SLU approval and user account (contact Tomas Klingström at tomas.klingstrom@slu.se for further information). To see the code generating the booklet you can visit https://github.com/TKlingstrom/gigacow_exampledata and download the entire code repository. For more information please read the following article: https://doi.org/10.3920/978-90-8686-940-4_434
+<!-- SLU styling: simple starter palette -->
+<style>
+h1, h2, h3 { color: #006938; }  /* SLU green (approx) */
+a { color: #005b96; }           /* SLU blue (approx) */
+</style>
+
+
+This booklet was created on 2026-01-21 as a brief overview on the available data in Gigacow collected from the DelPro herd management software. Gigacow consist of a SQL database with prepared views which can be accessed through dbplyr if you have received a SLU approval and user account (contact Tomas Klingström at tomas.klingstrom@slu.se for further information). To see the code generating the booklet you can visit https://github.com/TKlingstrom/gigacow_exampledata and download the entire code repository. For more information please read the following article: https://doi.org/10.3920/978-90-8686-940-4_434
 
 ```{r include = FALSE}
 #install.packages("odbc")
@@ -22,13 +29,13 @@ library(kableExtra)
 
 #Connecting to the database using the R user credentials.
 
-con <- dbConnect(odbc(), 
-                 Driver = "/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.3.so.2.1", 
-                 Server = "gigacow.db.slu.se", 
-                 Database = "gigacow", 
-                 UID = "gig_del", 
-                 PWD = rstudioapi::askForPassword("Enter your password"),
-                 TrustServerCertificate = "yes")
+con <- dbConnect(odbc(),
+                 Driver = "SQL Server",
+                 Server = "gigacow.db.slu.se",
+                 Database = "Gigacow",
+                 Trusted_Connection ="yes",
+                 Encrypt = "Optional"
+)
 odbcListObjects(con)
 
 #Shows the available tables in the schema.
@@ -125,22 +132,23 @@ kbl(DF.MilkRobot) %>%
 ```{r ParlourMilkings, include = TRUE, echo=FALSE}
 #The below code chunks run an SQL query on each table and then downloads the result.
 MilkOther_Con <- con %>% tbl(in_catalog("Gigacow", "sciDel", "Del_Milk_Other")) %>%
-  filter(MilkingDate >= "2023-04-20" & !is.na(SE_Number) & !is.na(SessionAverageFlow)) %>%
+  filter(MilkingDate >= "2023-04-20" & !is.na(SE_Number) & !is.na(Yield)) %>%
   slice_sample(n = 100)
 DF.MilkOther <- collect(MilkOther_Con)
 DF.MilkOther <- as.data.frame(lapply(DF.MilkOther, sample))
 DF.MilkOther <- slice_sample(DF.MilkOther, n = 10)
 write.csv2(DF.MilkOther, file = "MilkOther.csv")
 
-MilkOther_Con = con %>% tbl(in_catalog("Gigacow", "sciDel", "Del_Milk_Other")) %>%
+MilkOther = con %>% tbl(in_catalog("Gigacow", "sciDel", "Del_Milk_Other")) %>%
   group_by(FarmName_Pseudo) %>%
 #  summarise(count = Activity_Id) #%>% #This does not work
 #  summarise(count = n_distinct(Activity_Id), .groups = 'drop') #%>%
 #  summarise(count = n_distinct(SE_Number), .groups = 'drop')
-  summarise(nrMilkings = count(SE_Number), nrAnimals = n_distinct(SE_Number))
-MilkOther = collect(MilkOther_Con)
+  summarise(nrMilkings = count(SE_Number), nrAnimals = n_distinct(SE_Number)) %>%
+  collect()
 
 MilkOther
+
 
 kbl(DF.MilkOther) %>%
   kable_minimal("striped") %>%
